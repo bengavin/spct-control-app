@@ -1,0 +1,36 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://xamarin.com/schemas/2014/forms"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:local="clr-namespace:SPCTControlApp"
+             xmlns:xdata="clr-namespace:Xamarin.Forms.Xaml;assembly=Xamarin.Forms.Core"
+             x:Class="SPCTControlApp.MainPage">
+
+    <ContentPage.Resources>
+        <ResourceDictionary>
+        </ResourceDictionary>
+    </ContentPage.Resources>
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Label Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Text="Light Control" 
+               VerticalOptions="Center" HorizontalOptions="Center" />
+
+        <StackLayout Grid.Row="1" Grid.Column="0" 
+                     Orientation="Vertical" VerticalOptions="FillAndExpand">
+            <Label Text="Panel Device ID:" />
+            <Entry x:Name="PanelId" Text="{Binding PanelDeviceId, Mode=TwoWay}" IsEnabled="{Binding IsNotConnected}"  />
+            <Button x:Name="ConnectPanelButton" Text="Connect" Command="{Binding ConnectPanelCommand}" />
+            <Label x:Name="ConnectError" Text="{Binding ConnectionErrorText}" />
+            <Button x:Name="TestProcedureButton" Text="Run Test Procedure" Command="{Binding TestProcedureCommand}" />
+        </StackLayout>
+    </Grid>
+    
+
+</ContentPage>

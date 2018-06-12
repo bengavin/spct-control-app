@@ -1,0 +1,14 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/.vs
+/SPCTControlApp/SPCTControlApp/bin
+/SPCTControlApp/SPCTControlApp/obj
+/SPCTControlApp/SPCTControlApp.Android/bin
+/SPCTControlApp/SPCTControlApp.Android/obj
+/SPCTControlApp/SPCTControlApp.iOS/bin
+/SPCTControlApp/SPCTControlApp.iOS/obj
+/SPCTControlApp/SPCTControlApp.UWP/bin
+/SPCTControlApp/SPCTControlApp.UWP/obj
+
