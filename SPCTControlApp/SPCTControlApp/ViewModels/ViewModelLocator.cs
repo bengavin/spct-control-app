@@ -10,6 +10,6 @@ namespace SPCTControlApp.ViewModels
     {
         private static MainPageViewModel _mainViewModel;
 
-        public static MainPageViewModel MainPageViewModel => _mainViewModel ?? (_mainViewModel = new MainPageViewModel(SimpleIoc.Default.GetInstance<IWiFiDirectService>()));
+        public static MainPageViewModel MainPageViewModel => _mainViewModel ?? (_mainViewModel = new MainPageViewModel(SimpleIoc.Default.GetInstance<IPanelService>()));
     }
 }

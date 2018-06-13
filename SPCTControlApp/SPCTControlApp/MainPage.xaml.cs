@@ -21,5 +21,10 @@ namespace SPCTControlApp
 
             base.OnAppearing();
         }
+
+        private void PinchGestureRecognizer_PinchUpdated(object sender, PinchGestureUpdatedEventArgs e)
+        {
+            ViewModelLocator.MainPageViewModel.SelectColorCommand.Execute(new MainPageViewModel.CustomPinchUpdatedEventArgs((sender as Button).CommandParameter as ButtonStateViewModel, e));
+        }
     }
 }

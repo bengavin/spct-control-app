@@ -34,6 +34,7 @@ namespace SPCTControlApp.UWP
         {
             // Register IoC
             SimpleIoc.Default.Register<IWiFiDirectService, WifiDirectService>();
+            SimpleIoc.Default.Register<IPanelService, PanelService>();
 
             Frame rootFrame = Window.Current.Content as Frame;
 

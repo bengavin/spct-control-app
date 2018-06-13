@@ -16,6 +16,7 @@
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
@@ -26,10 +27,53 @@
                      Orientation="Vertical" VerticalOptions="FillAndExpand">
             <Label Text="Panel Device ID:" />
             <Entry x:Name="PanelId" Text="{Binding PanelDeviceId, Mode=TwoWay}" IsEnabled="{Binding IsNotConnected}"  />
-            <Button x:Name="ConnectPanelButton" Text="Connect" Command="{Binding ConnectPanelCommand}" />
+            <Button x:Name="ConnectPanelButton" Text="{Binding ConnectButtonText}" Command="{Binding ConnectPanelCommand}" />
             <Label x:Name="ConnectError" Text="{Binding ConnectionErrorText}" />
-            <Button x:Name="TestProcedureButton" Text="Run Test Procedure" Command="{Binding TestProcedureCommand}" />
         </StackLayout>
+        <StackLayout Grid.Row="1" Grid.Column="1"
+                     Orientation="Vertical" VerticalOptions="FillAndExpand"
+                     IsEnabled="{Binding IsConnected}">
+            <Label Text="Tempo Setup" />
+            <StackLayout Orientation="Horizontal" HorizontalOptions="StartAndExpand">
+                <Entry x:Name="Tempo" Text="{Binding PanelTempo, Mode=TwoWay}" Keyboard="Numeric" />
+                <Button x:Name="SetTempoButton" Text="Set Tempo" Command="{Binding SetTempoCommand}" />
+            </StackLayout>
+            <StackLayout Orientation="Horizontal" HorizontalOptions="End">
+                <Button x:Name="StartTempo" Text="Start" Command="{Binding StartTempoCommand}" />
+                <Button x:Name="StopTempo" Text="Stop" Command="{Binding StopTempoCommand}" />
+            </StackLayout>
+        </StackLayout>
+        <Grid Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="48" />
+                <ColumnDefinition Width="48" />
+                <ColumnDefinition Width="48" />
+                <ColumnDefinition Width="48" />
+                <ColumnDefinition Width="48" />
+                <ColumnDefinition Width="48" />
+                <ColumnDefinition Width="48" />
+                <ColumnDefinition Width="48" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="48" />
+                <RowDefinition Height="48" />
+                <RowDefinition Height="48" />
+            </Grid.RowDefinitions>
+            
+            <Label Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3" Text="Light Setup" Margin="0,20,0,0" />
+
+            <Button Grid.Row="1" Grid.Column="0" x:Name="Button10" BackgroundColor="{Binding ButtonStates.Button10.Color}" 
+                    Command="{Binding ToggleLightCommand}" 
+                    CommandParameter="{Binding ButtonStates.Button10}"
+                    BorderColor="{Binding ButtonStates.Button10.BorderColor}" 
+                    BorderWidth="2">
+                <Button.GestureRecognizers>
+                    <PinchGestureRecognizer PinchUpdated="PinchGestureRecognizer_PinchUpdated" />
+                </Button.GestureRecognizers>
+            </Button>
+        </Grid>
     </Grid>
     
 
