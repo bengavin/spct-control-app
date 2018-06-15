@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
+using Xamarin.Forms;
 
 namespace SPCTControlApp.Services
 {
@@ -22,6 +24,9 @@ namespace SPCTControlApp.Services
         bool IsLineRunning(int lineNumber);
 
         Task SetLightOnOff(int row, int col, bool onOff);
+        Task SetLightState(int row, int col, Color color, bool onOff);
+
+        Task TurnPanelOff();
     }
 
     public class PanelService : IPanelService
@@ -225,6 +230,51 @@ namespace SPCTControlApp.Services
             {
                 LastErrorMessage = $"Failed to contact panel: {response.ReasonPhrase}";
             }
+
+            OperationComplete?.Invoke(this, EventArgs.Empty);
+            return;
+        }
+
+        public async Task SetLightState(int row, int col, Color color, bool onOff)
+        {
+            var requestUri = $"http://{_panelBaseAddress}/led";
+            var request = new HttpRequestMessage(HttpMethod.Put, requestUri);
+            var colorString = $"rgba({Convert.ToInt32(color.R * 255)},{Convert.ToInt32(color.G * 255)},{Convert.ToInt32(color.B * 255)},{color.A})";
+
+            request.Content = new StringContent($"{{\"row\":{row},\"column\":{col},\"color\":\"{colorString}\",\"state\":\"{(onOff ? "on" : "off")}\"}}", Encoding.UTF8, "application/json");
+
+            var response = await _httpClient.SendAsync(request);
+
+            if (response.IsSuccessStatusCode)
+            {
+                LastErrorMessage = $"Light turned {(onOff ? "on" : "off")} to color {colorString} successfully";
+            }
+            else
+            {
+                LastErrorMessage = $"Failed to contact panel: {response.ReasonPhrase}";
+            }
+
+            OperationComplete?.Invoke(this, EventArgs.Empty);
+            return;
+        }
+
+        public async Task TurnPanelOff()
+        {
+            var requestUri = $"http://{_panelBaseAddress}/leds";
+            var request = new HttpRequestMessage(HttpMethod.Delete, requestUri);
+
+            var response = await _httpClient.SendAsync(request);
+
+            if (response.IsSuccessStatusCode)
+            {
+                LastErrorMessage = $"Panel turned off successfully";
+            }
+            else
+            {
+                LastErrorMessage = $"Failed to contact panel: {response.ReasonPhrase}";
+            }
+
+            _lineRunning.Keys.ToList().ForEach(k => _lineRunning[k] = false);
 
             OperationComplete?.Invoke(this, EventArgs.Empty);
             return;

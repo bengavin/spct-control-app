@@ -5,13 +5,18 @@ namespace SPCTControlApp.ViewModels
 {
     public class ButtonStateViewModel : ViewModelBase
     {
-        public ButtonStateViewModel(int row, int col)
+        // Give a decent ascending range of colors (greenish / pink leaning)
+        private const int colorStep = 0xFFFFFF / 19;
+
+        public ButtonStateViewModel(int row, int col, int color)
         {
             Row = row;
             Column = col;
+            int colorVal = 0 + colorStep * color;
+            Color = new Color((colorVal & 0xFF) / 255f, ((colorVal >> 8) & 0xFF) / 255f, ((colorVal >> 16) & 0xFF) / 255f, 0.8);
         }
 
-        public ButtonStateViewModel() : this(0, 0) { }
+        public ButtonStateViewModel() : this(0, 0, 0) { }
 
         public int Row { get; private set; }
         public int Column { get; private set; }
@@ -28,7 +33,7 @@ namespace SPCTControlApp.ViewModels
                 Set(() => IsOn, ref _isOn, value);
                 if (value)
                 {
-                    BorderColor = Color.Yellow;
+                    BorderColor = Color.Black;
                 }
                 else
                 {

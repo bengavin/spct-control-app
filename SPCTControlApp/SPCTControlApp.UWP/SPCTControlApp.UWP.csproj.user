@@ -4,6 +4,6 @@
     <UseSimulator>false</UseSimulator>
     <RemoteDebugMachine>192.168.192.110:4022 (Heracles)</RemoteDebugMachine>
     <AuthenticationMode>Windows</AuthenticationMode>
-    <RemoteDebugEnabled>false</RemoteDebugEnabled>
+    <RemoteDebugEnabled>true</RemoteDebugEnabled>
   </PropertyGroup>
 </Project>

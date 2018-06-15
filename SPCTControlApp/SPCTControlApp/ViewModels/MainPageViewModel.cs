@@ -11,10 +11,34 @@ namespace SPCTControlApp.ViewModels
     {
         public class ButtonStatesViewModel
         {
-            public ButtonStateViewModel Button10 { get; private set; } = new ButtonStateViewModel(1,0);
-            public ButtonStateViewModel Button11 { get; private set; } = new ButtonStateViewModel(1,1);
-            public ButtonStateViewModel Button12 { get; private set; } = new ButtonStateViewModel(1,2);
-            public ButtonStateViewModel Button13 { get; private set; } = new ButtonStateViewModel(1,3);
+            public void Off()
+            {
+                Button10.IsOn = Button11.IsOn =
+                Button12.IsOn = Button13.IsOn =
+                Button14.IsOn = Button15.IsOn =
+                Button16.IsOn = Button17.IsOn =
+                Button20.IsOn = Button21.IsOn =
+                Button22.IsOn = Button23.IsOn =
+                Button24.IsOn = Button25.IsOn =
+                Button26.IsOn = Button27.IsOn = false;
+            }
+
+            public ButtonStateViewModel Button10 { get; private set; } = new ButtonStateViewModel(1,0,1);
+            public ButtonStateViewModel Button11 { get; private set; } = new ButtonStateViewModel(1,1,2);
+            public ButtonStateViewModel Button12 { get; private set; } = new ButtonStateViewModel(1,2,3);
+            public ButtonStateViewModel Button13 { get; private set; } = new ButtonStateViewModel(1,3,4);
+            public ButtonStateViewModel Button14 { get; private set; } = new ButtonStateViewModel(1, 4, 5);
+            public ButtonStateViewModel Button15 { get; private set; } = new ButtonStateViewModel(1, 5, 6);
+            public ButtonStateViewModel Button16 { get; private set; } = new ButtonStateViewModel(1, 6, 7);
+            public ButtonStateViewModel Button17 { get; private set; } = new ButtonStateViewModel(1, 7, 8);
+            public ButtonStateViewModel Button20 { get; private set; } = new ButtonStateViewModel(2, 0, 9);
+            public ButtonStateViewModel Button21 { get; private set; } = new ButtonStateViewModel(2, 1, 10);
+            public ButtonStateViewModel Button22 { get; private set; } = new ButtonStateViewModel(2, 2, 11);
+            public ButtonStateViewModel Button23 { get; private set; } = new ButtonStateViewModel(2, 3, 12);
+            public ButtonStateViewModel Button24 { get; private set; } = new ButtonStateViewModel(2, 4, 13);
+            public ButtonStateViewModel Button25 { get; private set; } = new ButtonStateViewModel(2, 5, 14);
+            public ButtonStateViewModel Button26 { get; private set; } = new ButtonStateViewModel(2, 6, 15);
+            public ButtonStateViewModel Button27 { get; private set; } = new ButtonStateViewModel(2, 7, 16);
         }
 
         public class CustomPinchUpdatedEventArgs : EventArgs
@@ -41,20 +65,22 @@ namespace SPCTControlApp.ViewModels
             _panelService.OperationComplete += _panelService_OperationComplete;
 
             ConnectPanelCommand = new RelayCommand(async () => await ConnectPanel(), () => IsConnected || (!IsConnected && !String.IsNullOrWhiteSpace(PanelDeviceId)));
-            SetTempoCommand = new RelayCommand(() => SetTempo());
+            SetTempoCommand = new RelayCommand<object>(SetTempo);
             StartTempoCommand = new RelayCommand(() => _panelService.StartLine(0), () => !_panelService.IsLineRunning(0));
             StopTempoCommand = new RelayCommand(() => _panelService.StopLine(0), () => _panelService.IsLineRunning(0));
             ToggleLightCommand = new RelayCommand<ButtonStateViewModel>(async (args) => await ToggleLight(args));
             SelectColorCommand = new RelayCommand<CustomPinchUpdatedEventArgs>(SelectColor);
+            PanelOffCommand = new RelayCommand(PanelOff);
         }
 
 
         public RelayCommand ConnectPanelCommand { get; private set; }
-        public RelayCommand SetTempoCommand { get; private set; }
+        public RelayCommand<object> SetTempoCommand { get; private set; }
         public RelayCommand StartTempoCommand { get; private set; }
         public RelayCommand StopTempoCommand { get; private set; }
         public RelayCommand<ButtonStateViewModel> ToggleLightCommand { get; private set; }
         public RelayCommand<CustomPinchUpdatedEventArgs> SelectColorCommand { get; private set; }
+        public RelayCommand PanelOffCommand { get; private set; }
 
         public bool IsConnected
         {
@@ -106,9 +132,11 @@ namespace SPCTControlApp.ViewModels
             if (_panelService.IsConnected)
             {
                 _panelService.Disconnect();
+                ButtonStates.Off();
             }
             else
             {
+                ButtonStates.Off();
                 _panelService.Connect(PanelDeviceId);
             }
 
@@ -137,17 +165,36 @@ namespace SPCTControlApp.ViewModels
             }
         }
 
-        private void SetTempo()
+        private void SetTempo(object tempo)
         {
-            _panelService.SetTempo(PanelTempo);
+            if (tempo.GetType() == typeof(int))
+            {
+                _panelService.SetTempo((int)tempo);
+                PanelTempo = (int)tempo;
+            }
+            else
+            {
+                int tempoVal = Convert.ToInt32(tempo);
+                _panelService.SetTempo(tempoVal);
+                PanelTempo = tempoVal;
+            }
         }
 
         public ButtonStatesViewModel ButtonStates { get; private set; } = new ButtonStatesViewModel();
 
         private async Task ToggleLight(ButtonStateViewModel arg)
         {
-            arg.IsOn = !arg.IsOn;
-            _panelService.SetLightOnOff(arg.Row, arg.Column, arg.IsOn);
+            if (arg == null)
+            {
+                _panelService.StopLine(1);
+                _panelService.StopLine(2);
+                ButtonStates.Off();
+            }
+            else
+            {
+                arg.IsOn = !arg.IsOn;
+                _panelService.SetLightState(arg.Row, arg.Column, arg.Color, arg.IsOn);
+            }
         }
 
         private void SelectColor(CustomPinchUpdatedEventArgs args)
@@ -157,6 +204,12 @@ namespace SPCTControlApp.ViewModels
                 // Do something fancy
                 ConnectionErrorText = $"Holy Crap - I got a gesture! {args.Button.Row}, {args.Button.Column}";
             }
+        }
+
+        private void PanelOff()
+        {
+            _panelService.TurnPanelOff();
+            ButtonStates.Off();
         }
     }
 }

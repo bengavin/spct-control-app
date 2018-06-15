@@ -4,6 +4,7 @@ using SPCTControlApp.UWP.Services;
 using System;
 using Windows.ApplicationModel;
 using Windows.ApplicationModel.Activation;
+using Windows.UI.ViewManagement;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Navigation;
@@ -32,10 +33,6 @@ namespace SPCTControlApp.UWP
         /// <param name="e">Details about the launch request and process.</param>
         protected override void OnLaunched(LaunchActivatedEventArgs e)
         {
-            // Register IoC
-            SimpleIoc.Default.Register<IWiFiDirectService, WifiDirectService>();
-            SimpleIoc.Default.Register<IPanelService, PanelService>();
-
             Frame rootFrame = Window.Current.Content as Frame;
 
             // Do not repeat app initialization when the Window already has content,
@@ -65,6 +62,9 @@ namespace SPCTControlApp.UWP
                 // parameter
                 rootFrame.Navigate(typeof(MainPage), e.Arguments);
             }
+
+            ApplicationView.PreferredLaunchWindowingMode = ApplicationViewWindowingMode.FullScreen;
+
             // Ensure the current window is active
             Window.Current.Activate();
         }

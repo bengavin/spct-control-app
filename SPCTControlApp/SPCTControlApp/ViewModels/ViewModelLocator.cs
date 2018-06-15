@@ -6,10 +6,22 @@ using System.Text;
 
 namespace SPCTControlApp.ViewModels
 {
-    public static class ViewModelLocator
+    public class ViewModelLocator
     {
         private static MainPageViewModel _mainViewModel;
 
-        public static MainPageViewModel MainPageViewModel => _mainViewModel ?? (_mainViewModel = new MainPageViewModel(SimpleIoc.Default.GetInstance<IPanelService>()));
+        public ViewModelLocator()
+        {
+            // Register IoC
+            SimpleIoc.Default.Register<IPanelService, PanelService>();
+            SimpleIoc.Default.Register<MainPageViewModel>();
+        }
+
+        public MainPageViewModel MainPageViewModel => _mainViewModel ?? (_mainViewModel = SimpleIoc.Default.GetInstance<MainPageViewModel>());
+        public void Cleanup()
+        {
+            _mainViewModel.Cleanup();
+            _mainViewModel = null;
+        }
     }
 }
