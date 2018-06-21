@@ -2,6 +2,7 @@
 using GalaSoft.MvvmLight.Command;
 using SPCTControlApp.Services;
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Xamarin.Forms;
 
@@ -57,20 +58,29 @@ namespace SPCTControlApp.ViewModels
 
         private bool _isConnected;
         private string _panelDeviceId;
+        private TimeSpan _timeSinceStart;
         private string _connectionErrorText;
+        private System.Threading.Timer _timer;
 
         public MainPageViewModel(IPanelService panelService)
         {
             _panelService = panelService;
             _panelService.OperationComplete += _panelService_OperationComplete;
 
+            _panelDeviceId = "192.168.197.1:8800";
+            _timeSinceStart = TimeSpan.Zero;
+            _timer = new Timer(new TimerCallback(_timer_tick), null, Timeout.Infinite, Timeout.Infinite);
+
             ConnectPanelCommand = new RelayCommand(async () => await ConnectPanel(), () => IsConnected || (!IsConnected && !String.IsNullOrWhiteSpace(PanelDeviceId)));
             SetTempoCommand = new RelayCommand<object>(SetTempo);
-            StartTempoCommand = new RelayCommand(() => _panelService.StartLine(0), () => !_panelService.IsLineRunning(0));
-            StopTempoCommand = new RelayCommand(() => _panelService.StopLine(0), () => _panelService.IsLineRunning(0));
+            StartTempoCommand = new RelayCommand(() => { TimeSinceStart = TimeSpan.Zero; _timer.Change(1000, 1000); _panelService.StartLine(0); }, () => !_panelService.IsLineRunning(0));
+            StopTempoCommand = new RelayCommand(() => { _timer.Change(Timeout.Infinite, Timeout.Infinite); _panelService.StopLine(0, true); }, () => _panelService.IsLineRunning(0));
             ToggleLightCommand = new RelayCommand<ButtonStateViewModel>(async (args) => await ToggleLight(args));
             SelectColorCommand = new RelayCommand<CustomPinchUpdatedEventArgs>(SelectColor);
             PanelOffCommand = new RelayCommand(PanelOff);
+            ModifyTempoCommand = new RelayCommand<string>(ModifyTempo);
+            PlayLine1Command = new RelayCommand<string>(PlayLine1);
+            PlayLine2Command = new RelayCommand<string>(PlayLine2);
         }
 
 
@@ -81,6 +91,9 @@ namespace SPCTControlApp.ViewModels
         public RelayCommand<ButtonStateViewModel> ToggleLightCommand { get; private set; }
         public RelayCommand<CustomPinchUpdatedEventArgs> SelectColorCommand { get; private set; }
         public RelayCommand PanelOffCommand { get; private set; }
+        public RelayCommand<string> ModifyTempoCommand { get; private set; }
+        public RelayCommand<string> PlayLine1Command { get; private set; }
+        public RelayCommand<string> PlayLine2Command { get; private set; }
 
         public bool IsConnected
         {
@@ -92,6 +105,15 @@ namespace SPCTControlApp.ViewModels
                 RaisePropertyChanged(() => ConnectButtonText);
                 ConnectPanelCommand.RaiseCanExecuteChanged();
                 SetTempoCommand.RaiseCanExecuteChanged();
+            }
+        }
+
+        public TimeSpan TimeSinceStart
+        {
+            get { return _timeSinceStart; }
+            set
+            {
+                Set(() => TimeSinceStart, ref _timeSinceStart, value);
             }
         }
 
@@ -155,6 +177,11 @@ namespace SPCTControlApp.ViewModels
             });
         }
 
+        private void _timer_tick(object state)
+        {
+            TimeSinceStart = _timeSinceStart.Add(TimeSpan.FromSeconds(1));
+        }
+
         private int _panelTempo;
         public int PanelTempo
         {
@@ -174,10 +201,19 @@ namespace SPCTControlApp.ViewModels
             }
             else
             {
-                int tempoVal = Convert.ToInt32(tempo);
+                var tempoVals = tempo.ToString().Split(new[] { ',' });
+                var multiplier = tempoVals.Length > 1 ? Convert.ToInt32(tempoVals[1]) / 100f : 0.95;
+
+                int tempoVal = Convert.ToInt32(Math.Round(Convert.ToInt32(tempoVals[0]) * multiplier, 0));
                 _panelService.SetTempo(tempoVal);
                 PanelTempo = tempoVal;
             }
+        }
+
+        private void ModifyTempo(string tempoChange)
+        {
+            var tempoChangeVal = Convert.ToInt32(tempoChange);
+            SetTempo(PanelTempo + tempoChangeVal);
         }
 
         public ButtonStatesViewModel ButtonStates { get; private set; } = new ButtonStatesViewModel();
@@ -186,8 +222,9 @@ namespace SPCTControlApp.ViewModels
         {
             if (arg == null)
             {
-                _panelService.StopLine(1);
-                _panelService.StopLine(2);
+                _panelService.StopLine(1, true)
+                             .ContinueWith(t =>
+                                _panelService.StopLine(2, true));
                 ButtonStates.Off();
             }
             else
@@ -195,6 +232,16 @@ namespace SPCTControlApp.ViewModels
                 arg.IsOn = !arg.IsOn;
                 _panelService.SetLightState(arg.Row, arg.Column, arg.Color, arg.IsOn);
             }
+        }
+
+        private void PlayLine1(string command)
+        {
+            _panelService.StartLine(1, command);
+        }
+
+        private void PlayLine2(string command)
+        {
+            _panelService.StartLine(2, command);
         }
 
         private void SelectColor(CustomPinchUpdatedEventArgs args)
@@ -208,6 +255,7 @@ namespace SPCTControlApp.ViewModels
 
         private void PanelOff()
         {
+            _timer.Change(Timeout.Infinite, Timeout.Infinite);
             _panelService.TurnPanelOff();
             ButtonStates.Off();
         }

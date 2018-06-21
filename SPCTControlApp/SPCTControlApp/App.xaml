@@ -6,5 +6,17 @@
     <Application.Resources>
         <!-- Application resource dictionary -->
         <viewModel:ViewModelLocator x:Key="Locator"/>
+        <Style TargetType="Label">
+            <Setter Property="TextColor" Value="AntiqueWhite" />
+        </Style>
+        <Style TargetType="Button">
+            <Setter Property="TextColor" Value="AntiqueWhite" />
+            <Setter Property="BorderColor" Value="LightSlateGray" />
+            <Setter Property="BackgroundColor" Value="SlateGray" />
+        </Style>
+        <Style TargetType="Entry">
+            <Setter Property="TextColor" Value="Black" />
+            <Setter Property="BackgroundColor" Value="AntiqueWhite" />
+        </Style>
     </Application.Resources>
 </Application>

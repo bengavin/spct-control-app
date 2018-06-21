@@ -20,7 +20,8 @@ namespace SPCTControlApp.Services
         Task SetTempo(int newTempo);
 
         Task StartLine(int lineNumber);
-        Task StopLine(int lineNumber);
+        Task StartLine(int lineNumber, string command);
+        Task StopLine(int lineNumber, bool reset = false);
         bool IsLineRunning(int lineNumber);
 
         Task SetLightOnOff(int row, int col, bool onOff);
@@ -43,36 +44,47 @@ namespace SPCTControlApp.Services
         public async Task<bool> Connect(string panelBaseAddress)
         {
             var requestUri = $"http://{panelBaseAddress}/connect";
-            var request = new HttpRequestMessage(HttpMethod.Put, requestUri);
-            var response = await _httpClient.SendAsync(request);
-
-            IsConnected = false;
-
-            if (response.IsSuccessStatusCode)
+            using (var request = new HttpRequestMessage(HttpMethod.Put, requestUri))
             {
-                LastErrorMessage = "Panel Contacted... waiting for connected status";
-            }
-            else
-            {
-                LastErrorMessage = $"Failed to contact panel: {response.ReasonPhrase}";
-                OperationComplete?.Invoke(this, EventArgs.Empty);
-                return false;
+                using (var response = await _httpClient.SendAsync(request))
+                {
+
+                    IsConnected = false;
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        LastErrorMessage = "Panel Contacted... waiting for connected status";
+                    }
+                    else if (response.StatusCode == System.Net.HttpStatusCode.NotModified)
+                    {
+                        // Assume panel is already connected
+                        LastErrorMessage = "Panel already connected, disconnect + reconnect if not working";
+                    }
+                    else
+                    {
+                        LastErrorMessage = $"Failed to contact panel: {response.ReasonPhrase}";
+                        OperationComplete?.Invoke(this, EventArgs.Empty);
+                        return false;
+                    }
+                }
             }
 
             int retryCount = 0;
 
             while (retryCount <= 5)
             {
-                response = await _httpClient.GetAsync($"http://{panelBaseAddress}/state");
-                var result = await response.Content.ReadAsStringAsync();
-                var stateResult = Newtonsoft.Json.JsonConvert.DeserializeObject<StateResult>(result);
-                if (stateResult.State > 1)
+                using (var response = await _httpClient.GetAsync($"http://{panelBaseAddress}/state"))
                 {
-                    _panelBaseAddress = panelBaseAddress;
-                    LastErrorMessage = "Success - Connected!";
-                    IsConnected = true;
-                    OperationComplete?.Invoke(this, EventArgs.Empty);
-                    return true;
+                    var result = await response.Content.ReadAsStringAsync();
+                    var stateResult = Newtonsoft.Json.JsonConvert.DeserializeObject<StateResult>(result);
+                    if (stateResult.State > 1)
+                    {
+                        _panelBaseAddress = panelBaseAddress;
+                        LastErrorMessage = "Success - Connected!";
+                        IsConnected = true;
+                        OperationComplete?.Invoke(this, EventArgs.Empty);
+                        return true;
+                    }
                 }
 
                 await Task.Delay(TimeSpan.FromSeconds(10));
@@ -86,36 +98,42 @@ namespace SPCTControlApp.Services
         public async Task Disconnect()
         {
             var requestUri = $"http://{_panelBaseAddress}/connect";
-            var request = new HttpRequestMessage(HttpMethod.Delete, requestUri);
-            var response = await _httpClient.SendAsync(request);
-
-            IsConnected = false;
-
-            if (response.IsSuccessStatusCode)
+            using (var request = new HttpRequestMessage(HttpMethod.Delete, requestUri))
             {
-                LastErrorMessage = "Panel Contacted... waiting for disconnected status";
-            }
-            else
-            {
-                LastErrorMessage = $"Failed to contact panel: {response.ReasonPhrase}";
-                OperationComplete?.Invoke(this, EventArgs.Empty);
-                return;
+                using (var response = await _httpClient.SendAsync(request))
+                {
+
+                    IsConnected = false;
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        LastErrorMessage = "Panel Contacted... waiting for disconnected status";
+                    }
+                    else
+                    {
+                        LastErrorMessage = $"Failed to contact panel: {response.ReasonPhrase}";
+                        OperationComplete?.Invoke(this, EventArgs.Empty);
+                        return;
+                    }
+                }
             }
 
             int retryCount = 0;
 
             while (retryCount <= 5)
             {
-                response = await _httpClient.GetAsync($"http://{_panelBaseAddress}/state");
-                var result = await response.Content.ReadAsStringAsync();
-                var stateResult = Newtonsoft.Json.JsonConvert.DeserializeObject<StateResult>(result);
-                if (stateResult.State <= 1)
+                using (var response = await _httpClient.GetAsync($"http://{_panelBaseAddress}/state"))
                 {
-                    LastErrorMessage = "Success - Disconnected";
-                    IsConnected = false;
-                    _panelBaseAddress = null;
-                    OperationComplete?.Invoke(this, EventArgs.Empty);
-                    return;
+                    var result = await response.Content.ReadAsStringAsync();
+                    var stateResult = Newtonsoft.Json.JsonConvert.DeserializeObject<StateResult>(result);
+                    if (stateResult.State <= 1)
+                    {
+                        LastErrorMessage = "Success - Disconnected";
+                        IsConnected = false;
+                        _panelBaseAddress = null;
+                        OperationComplete?.Invoke(this, EventArgs.Empty);
+                        return;
+                    }
                 }
 
                 await Task.Delay(TimeSpan.FromSeconds(10));
@@ -129,18 +147,22 @@ namespace SPCTControlApp.Services
         public async Task SetTempo(int newTempo)
         {
             var requestUri = $"http://{_panelBaseAddress}/tempo";
-            var request = new HttpRequestMessage(HttpMethod.Put, requestUri);
-            request.Content = new StringContent($"{{\"bpm\":{newTempo}}}", Encoding.UTF8, "application/json");
-
-            var response = await _httpClient.SendAsync(request);
-
-            if (response.IsSuccessStatusCode)
+            using (var request = new HttpRequestMessage(HttpMethod.Put, requestUri))
             {
-                LastErrorMessage = "Tempo set successfully";
-            }
-            else
-            {
-                LastErrorMessage = $"Failed to contact panel: {response.ReasonPhrase}";
+                request.Content = new StringContent($"{{\"bpm\":{newTempo}}}", Encoding.UTF8, "application/json");
+
+                using (var response = await _httpClient.SendAsync(request))
+                {
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        LastErrorMessage = "Tempo set successfully";
+                    }
+                    else
+                    {
+                        LastErrorMessage = $"Failed to contact panel: {response.ReasonPhrase}";
+                    }
+                }
             }
 
             OperationComplete?.Invoke(this, EventArgs.Empty);
@@ -151,59 +173,76 @@ namespace SPCTControlApp.Services
         private Dictionary<int, bool> _lineRunning = new Dictionary<int, bool>();
         public async Task StartLine(int lineNumber)
         {
+            await StartLine(lineNumber, null);
+        }
+
+        public async Task StartLine(int lineNumber, string command)
+        {
             var isRunning = false;
-            if (_lineRunning.TryGetValue(lineNumber, out isRunning))
+            if (String.IsNullOrWhiteSpace(command) && _lineRunning.TryGetValue(lineNumber, out isRunning))
             {
                 if (isRunning) { return; }
             }
 
             var requestUri = $"http://{_panelBaseAddress}/line/{lineNumber}";
-            var request = new HttpRequestMessage(HttpMethod.Post, requestUri);
+            using (var request = new HttpRequestMessage(HttpMethod.Post, requestUri))
+            {
+                if (!String.IsNullOrWhiteSpace(command))
+                {
+                    request.Content = new StringContent(command, Encoding.UTF8, "application/json");
+                }
 
-            var response = await _httpClient.SendAsync(request);
+                using (var response = await _httpClient.SendAsync(request))
+                {
 
-            if (response.IsSuccessStatusCode)
-            {
-                LastErrorMessage = "Line started set successfully";
-                isRunning = true;
-            }
-            else
-            {
-                LastErrorMessage = $"Failed to contact panel: {response.ReasonPhrase}";
-            }
+                    if (response.IsSuccessStatusCode)
+                    {
+                        LastErrorMessage = "Line started set successfully";
+                        isRunning = true;
+                    }
+                    else
+                    {
+                        LastErrorMessage = $"Failed to contact panel: {response.ReasonPhrase}";
+                    }
 
-            if (_lineRunning.ContainsKey(lineNumber))
-            {
-                _lineRunning[lineNumber] = isRunning;
-            }
-            else
-            {
-                _lineRunning.Add(lineNumber, isRunning);
+                    if (_lineRunning.ContainsKey(lineNumber))
+                    {
+                        _lineRunning[lineNumber] = isRunning;
+                    }
+                    else
+                    {
+                        _lineRunning.Add(lineNumber, isRunning);
+                    }
+                }
             }
 
             OperationComplete?.Invoke(this, EventArgs.Empty);
             return;
         }
 
-        public async Task StopLine(int lineNumber)
+        public async Task StopLine(int lineNumber, bool reset = false)
         {
-            if (!_lineRunning.ContainsKey(lineNumber) || !_lineRunning[lineNumber]) { return; }
+            if (!reset && (!_lineRunning.ContainsKey(lineNumber) || !_lineRunning[lineNumber])) { return; }
 
-            var requestUri = $"http://{_panelBaseAddress}/line/{lineNumber}";
-            var request = new HttpRequestMessage(HttpMethod.Delete, requestUri);
-
-            var response = await _httpClient.SendAsync(request);
-
-            if (response.IsSuccessStatusCode)
+            var requestUri = $"http://{_panelBaseAddress}/line/{lineNumber}?reset={reset.ToString().ToLower()}";
+            using (var request = new HttpRequestMessage(HttpMethod.Delete, requestUri))
             {
-                LastErrorMessage = "Line stopped set successfully";
-            }
-            else
-            {
-                LastErrorMessage = $"Failed to contact panel: {response.ReasonPhrase}";
-            }
 
-            _lineRunning[lineNumber] = false;
+                using (var response = await _httpClient.SendAsync(request))
+                {
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        LastErrorMessage = "Line stopped set successfully";
+                    }
+                    else
+                    {
+                        LastErrorMessage = $"Failed to contact panel: {response.ReasonPhrase}";
+                    }
+
+                    _lineRunning[lineNumber] = false;
+                }
+            }
 
             OperationComplete?.Invoke(this, EventArgs.Empty);
             return;
@@ -217,18 +256,22 @@ namespace SPCTControlApp.Services
         public async Task SetLightOnOff(int row, int col, bool onOff)
         {
             var requestUri = $"http://{_panelBaseAddress}/led";
-            var request = new HttpRequestMessage(HttpMethod.Put, requestUri);
-            request.Content = new StringContent($"{{\"row\":{row},\"column\":{col},\"state\":\"{(onOff ? "on" : "off")}\"}}", Encoding.UTF8, "application/json");
-
-            var response = await _httpClient.SendAsync(request);
-
-            if (response.IsSuccessStatusCode)
+            using (var request = new HttpRequestMessage(HttpMethod.Put, requestUri))
             {
-                LastErrorMessage = $"Light turned {(onOff ? "on" : "off")} successfully";
-            }
-            else
-            {
-                LastErrorMessage = $"Failed to contact panel: {response.ReasonPhrase}";
+                request.Content = new StringContent($"{{\"row\":{row},\"column\":{col},\"state\":\"{(onOff ? "on" : "off")}\"}}", Encoding.UTF8, "application/json");
+
+                using (var response = await _httpClient.SendAsync(request))
+                {
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        LastErrorMessage = $"Light turned {(onOff ? "on" : "off")} successfully";
+                    }
+                    else
+                    {
+                        LastErrorMessage = $"Failed to contact panel: {response.ReasonPhrase}";
+                    }
+                }
             }
 
             OperationComplete?.Invoke(this, EventArgs.Empty);
@@ -238,20 +281,31 @@ namespace SPCTControlApp.Services
         public async Task SetLightState(int row, int col, Color color, bool onOff)
         {
             var requestUri = $"http://{_panelBaseAddress}/led";
-            var request = new HttpRequestMessage(HttpMethod.Put, requestUri);
-            var colorString = $"rgba({Convert.ToInt32(color.R * 255)},{Convert.ToInt32(color.G * 255)},{Convert.ToInt32(color.B * 255)},{color.A})";
-
-            request.Content = new StringContent($"{{\"row\":{row},\"column\":{col},\"color\":\"{colorString}\",\"state\":\"{(onOff ? "on" : "off")}\"}}", Encoding.UTF8, "application/json");
-
-            var response = await _httpClient.SendAsync(request);
-
-            if (response.IsSuccessStatusCode)
+            using (var request = new HttpRequestMessage(HttpMethod.Put, requestUri))
             {
-                LastErrorMessage = $"Light turned {(onOff ? "on" : "off")} to color {colorString} successfully";
-            }
-            else
-            {
-                LastErrorMessage = $"Failed to contact panel: {response.ReasonPhrase}";
+                var colorString = $"rgba({Convert.ToInt32(color.R * 255)},{Convert.ToInt32(color.G * 255)},{Convert.ToInt32(color.B * 255)},{color.A})";
+
+                if (onOff)
+                {
+                    request.Content = new StringContent($"{{\"row\":{row},\"column\":{col},\"color\":\"{colorString}\",\"state\":\"{(onOff ? "on" : "off")}\"}}", Encoding.UTF8, "application/json");
+                }
+                else
+                {
+                    request.Content = new StringContent($"{{\"row\":{row},\"column\":{col},\"state\":\"{(onOff ? "on" : "off")}\"}}", Encoding.UTF8, "application/json");
+                }
+
+                using (var response = await _httpClient.SendAsync(request))
+                {
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        LastErrorMessage = $"Light turned {(onOff ? "on" : "off")} to color {colorString} successfully";
+                    }
+                    else
+                    {
+                        LastErrorMessage = $"Failed to contact panel: {response.ReasonPhrase}";
+                    }
+                }
             }
 
             OperationComplete?.Invoke(this, EventArgs.Empty);
@@ -261,20 +315,24 @@ namespace SPCTControlApp.Services
         public async Task TurnPanelOff()
         {
             var requestUri = $"http://{_panelBaseAddress}/leds";
-            var request = new HttpRequestMessage(HttpMethod.Delete, requestUri);
-
-            var response = await _httpClient.SendAsync(request);
-
-            if (response.IsSuccessStatusCode)
+            using (var request = new HttpRequestMessage(HttpMethod.Delete, requestUri))
             {
-                LastErrorMessage = $"Panel turned off successfully";
-            }
-            else
-            {
-                LastErrorMessage = $"Failed to contact panel: {response.ReasonPhrase}";
-            }
 
-            _lineRunning.Keys.ToList().ForEach(k => _lineRunning[k] = false);
+                using (var response = await _httpClient.SendAsync(request))
+                {
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        LastErrorMessage = $"Panel turned off successfully";
+                    }
+                    else
+                    {
+                        LastErrorMessage = $"Failed to contact panel: {response.ReasonPhrase}";
+                    }
+
+                    _lineRunning.Keys.ToList().ForEach(k => _lineRunning[k] = false);
+                }
+            }
 
             OperationComplete?.Invoke(this, EventArgs.Empty);
             return;
